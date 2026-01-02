@@ -8,20 +8,20 @@ on:
 
 jobs:
   deploy:
-    # Só roda se o PR foi mergeado (aprovado)
+    # Garante que só roda se você clicou em "Confirm Merge"
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       REGION: us-central1
-      REPO_NAME: meu-repo-docker 
+      REPO_NAME: meu-repo-docker # TEM QUE SER O MESMO NOME DO TERRAFORM
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 1. Autenticação na GCP
+      # 1. Autenticação na Google Cloud
       - name: Google Auth
         uses: 'google-github-actions/auth@v1'
         with:
@@ -31,12 +31,12 @@ jobs:
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v1'
 
-      # 3. Autentica o Docker
+      # 3. Autentica o Docker com o Artifact Registry
       - name: Docker Auth
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      # 4. Build e Push da Imagem (Aqui ele usa o Dockerfile e requirements.txt internamente)
+      # 4. Build e Push da Imagem Docker
       - name: Build and Push Container
         run: |
           TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/app:${{ github.sha }}"
@@ -50,6 +50,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
 
       # 6. Aplica a Infraestrutura
+      # IMPORTANTE: O working-directory aponta para a pasta onde está o main.tf
       - name: Terraform Deploy
         working-directory: ./Terraform
         run: |
@@ -57,4 +58,3 @@ jobs:
           terraform apply -auto-approve \
             -var="project_id=${{ env.PROJECT_ID }}" \
             -var="docker_image=${{ env.IMAGE_TAG }}"
-      #teste
