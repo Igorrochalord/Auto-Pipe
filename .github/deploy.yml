@@ -8,20 +8,22 @@ on:
 
 jobs:
   deploy:
-    # Só roda se o PR foi mergeado (aprovado)
+    # Esta linha garante que só roda se o PR foi ACEITO (Mergeado)
+    # Se você fechar o PR sem aceitar, isso não roda.
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       REGION: us-central1
+      # ATENÇÃO: Esse nome deve ser IGUAL ao definido no terraform (google_artifact_registry_repository)
       REPO_NAME: meu-repo-docker 
 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 1. Autenticação na GCP
+      # 1. Autenticação na GCP usando a chave JSON (Secrets)
       - name: Google Auth
         uses: 'google-github-actions/auth@v1'
         with:
@@ -31,30 +33,37 @@ jobs:
       - name: Set up Cloud SDK
         uses: 'google-github-actions/setup-gcloud@v1'
 
-      # 3. Autentica o Docker
+      # 3. Autentica o Docker para conseguir subir imagens no Artifact Registry
       - name: Docker Auth
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      # 4. Build e Push da Imagem (Aqui ele usa o Dockerfile e requirements.txt)
+      # 4. Build e Push da Imagem Docker
       - name: Build and Push Container
         run: |
+          # Define a Tag usando o hash do commit (SHA) para ser único
           TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/app:${{ github.sha }}"
+          
           echo "Construindo imagem: $TAG"
           docker build -t $TAG .
           docker push $TAG
+          
+          # Salva a tag numa variável de ambiente para o próximo passo usar
           echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
 
-      # 5. Instala o Terraform
+      # 5. Instala o Terraform no Runner
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
 
-      # 6. Aplica a Infraestrutura
+      # 6. Aplica a Infraestrutura (Atualiza o Cloud Run com a nova imagem)
       - name: Terraform Deploy
         working-directory: ./terraform
         run: |
           terraform init
+          
+          # Passa as variáveis para o Terraform:
+          # - project_id: vem dos secrets
+          # - docker_image: é a imagem que acabamos de criar
           terraform apply -auto-approve \
             -var="project_id=${{ env.PROJECT_ID }}" \
             -var="docker_image=${{ env.IMAGE_TAG }}"
-      #teste
