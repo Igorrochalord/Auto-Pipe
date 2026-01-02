@@ -57,3 +57,4 @@ jobs:
           terraform apply -auto-approve \
             -var="project_id=${{ env.PROJECT_ID }}" \
             -var="docker_image=${{ env.IMAGE_TAG }}"
+      #teste
