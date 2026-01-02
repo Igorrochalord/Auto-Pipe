@@ -5,13 +5,15 @@ terraform {
       version = ">= 4.0"
     }
   }
-  
-  # ATENÇÃO: Você deve criar este bucket manualmente na GCP antes de rodar
+
   backend "gcs" {
-    bucket  = "meu-bucket-terraform-state" # Troque por um nome único seu
+    # COLOQUE AQUI O NOME EXATO DO BUCKET QUE VOCÊ CRIOU MANUALMENTE
+    bucket  = "terraform-state-igor-python-v1" 
     prefix  = "terraform/state"
   }
 }
+
+# ... resto do código ...
 
 provider "google" {
   project = var.project_id
