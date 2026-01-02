@@ -51,7 +51,7 @@ jobs:
 
       # 6. Aplica a Infraestrutura
       - name: Terraform Deploy
-        working-directory: ./terraform
+        working-directory: ./Terraform
         run: |
           terraform init
           terraform apply -auto-approve \
